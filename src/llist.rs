@@ -96,7 +96,7 @@ where
 
     /// Push element to the start of the list.
     pub fn push_front(&mut self, key: K, item: T) {
-        let mut cursor = match self.start.clone() {
+        let cursor = match self.start.clone() {
             Some(x) => x,
             None => return,
         };
@@ -118,14 +118,14 @@ where
         };
 
         for _ in 0..index {
-            let cur_next = cursor.as_ref().borrow().next.clone();
+            let cur_next = cursor.borrow().next.clone();
             cursor = match cur_next {
                 Some(x) => x,
                 None => return,
             };
         }
 
-        let mut cursor_node = cursor.as_ref().borrow_mut();
+        let mut cursor_node = cursor.borrow_mut();
         let cursor_old_next = cursor_node.next.clone();
         let new_node = Rc::new(RefCell::new(Node {
             key,
@@ -135,6 +135,28 @@ where
         cursor_node.next = Some(new_node);
     }
 
+    // Removes the element with the specified key, and returns it's value or None if not found.
+    pub fn remove(&mut self, key: K) -> Option<T> {
+        let mut cursor = match self.start.clone() {
+            Some(x) => x,
+            None => return None,
+        };
+        let mut back_cursor = cursor.clone();
+        loop {
+            if cursor.borrow().key != key {
+                back_cursor = cursor.clone();
+                cursor = match cursor.clone().borrow().next.clone() {
+                    Some(x) => x,
+                    None => return None,
+                };
+                continue;
+            }
+            let next = cursor.borrow().next.clone();
+            back_cursor.borrow_mut().next = next;
+            return Some(cursor.borrow().item.clone());
+        }
+    }
+
     /// Get element with the specified key, or None if none was found.
     pub fn get(&self, key: K) -> Option<T> {
         let mut cursor = match self.start.clone() {
@@ -142,14 +164,14 @@ where
             None => return None,
         };
         loop {
-            if cursor.as_ref().borrow().key != key {
-                cursor = match cursor.clone().as_ref().borrow().next.clone() {
+            if cursor.borrow().key != key {
+                cursor = match cursor.clone().borrow().next.clone() {
                     Some(x) => x,
                     None => return None,
                 };
                 continue;
             }
-            return Some(cursor.as_ref().borrow().item.clone());
+            return Some(cursor.borrow().item.clone());
         }
     }
 
@@ -163,7 +185,7 @@ where
         };
         loop {
             i += 1;
-            let cur_next = cursor.as_ref().borrow().next.clone();
+            let cur_next = cursor.borrow().next.clone();
             cursor = match cur_next {
                 Some(x) => x,
                 None => break,
@@ -211,12 +233,12 @@ where
         };
         let mut str_buf = String::new();
         loop {
-            let key = cursor.as_ref().borrow().key.clone();
-            let item = cursor.as_ref().borrow().item.clone();
+            let key = cursor.borrow().key.clone();
+            let item = cursor.borrow().item.clone();
             let fmt = format!("{key} -> {item}");
             str_buf.push_str(&fmt);
             str_buf.push('\n');
-            let cur_next = cursor.as_ref().borrow().next.clone();
+            let cur_next = cursor.borrow().next.clone();
             cursor = match cur_next {
                 Some(x) => x,
                 None => break,
