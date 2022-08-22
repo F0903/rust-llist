@@ -13,6 +13,9 @@ fn main() {
     list.insert(69, "test", 2);
 
     list.remove(3);
+    list.pop();
+
+    list.push_front(32, "im at the front!");
 
     let len = list.len();
     println!("len: {len}\n{list}");

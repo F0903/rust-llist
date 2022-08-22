@@ -135,7 +135,7 @@ where
         cursor_node.next = Some(new_node);
     }
 
-    // Removes the element with the specified key, and returns it's value or None if not found.
+    /// Removes the element with the specified key, and returns it's value or None if not found.
     pub fn remove(&mut self, key: K) -> Option<T> {
         let mut cursor = match self.start.clone() {
             Some(x) => x,
@@ -155,6 +155,27 @@ where
             back_cursor.borrow_mut().next = next;
             return Some(cursor.borrow().item.clone());
         }
+    }
+
+    /// Removes the last element from the list and returns it's key and value, or None if the list is empty.
+    pub fn pop(&mut self) -> Option<(K, T)> {
+        let mut cursor = match self.start.clone() {
+            Some(x) => x,
+            None => return None,
+        };
+        let mut back_cursor = cursor.clone();
+        loop {
+            let next_opt = cursor.borrow().next.clone();
+            if let Some(next) = next_opt {
+                back_cursor = cursor.clone();
+                cursor = next;
+                continue;
+            }
+            back_cursor.borrow_mut().next = None;
+            break;
+        }
+        let cur_val = cursor.borrow();
+        return Some((cur_val.key.clone(), cur_val.item.clone()));
     }
 
     /// Get element with the specified key, or None if none was found.
