@@ -1,5 +1,4 @@
 use std::{
-    borrow::Borrow,
     cell::RefCell,
     fmt::{Debug, Display},
     ptr::null,
@@ -26,9 +25,10 @@ where
 
 impl<K, T> LList<K, T>
 where
-    K: Eq + Debug,
+    K: Clone + Eq + Debug,
     T: Clone + Debug,
 {
+    /// Create a new empty list.
     pub fn new() -> Self {
         LList {
             start: None,
@@ -37,18 +37,32 @@ where
         }
     }
 
-    #[cfg(debug_assertions)]
-    fn check_if_key_exists(&self, key: &K) {
-        for node in self.start.borrow() {
-            if *key == node.as_ref().borrow().key {
-                panic!("Key already exists in list!");
+    fn reset_cursor(&mut self) {
+        self.iter_cursor = match &self.start {
+            Some(x) => x.as_ptr(),
+            None => null(),
+        };
+    }
+
+    fn check_if_key_exists(&mut self, key: &K) -> bool {
+        let mut result = false;
+        for (k, _) in self.by_ref() {
+            if *key == k {
+                result = true;
+                break;
             }
         }
+        self.reset_cursor();
+        result
+    }
+
+    fn set_start(&mut self, new_start: NodeElem<K, T>) {
+        self.start = Some(new_start.clone());
+        self.iter_cursor = new_start.as_ptr();
     }
 
     fn append_tip(&mut self, key: K, item: T) {
-        #[cfg(debug_assertions)]
-        self.check_if_key_exists(&key);
+        debug_assert!(!self.check_if_key_exists(&key));
         let next = Rc::new(RefCell::new(Node {
             key,
             item,
@@ -62,6 +76,7 @@ where
         println!("Tip is now: {:?}", self.tip);
     }
 
+    /// Push element to the back of the list.
     pub fn push(&mut self, key: K, item: T) {
         if let None = self.tip {
             let start = Rc::new(RefCell::new(Node {
@@ -79,28 +94,48 @@ where
         self.append_tip(key, item);
     }
 
+    /// Push element to the start of the list.
+    pub fn push_front(&mut self, key: K, item: T) {
+        let mut cursor = match self.start.clone() {
+            Some(x) => x,
+            None => return,
+        };
+        let new_node = Rc::new(RefCell::new(Node {
+            key,
+            item,
+            next: Some(cursor),
+        }));
+        self.set_start(new_node);
+    }
+
+    /// Insert element after the element at the specified index.
     pub fn insert(&mut self, key: K, item: T, index: usize) {
-        todo!();
+        debug_assert!(index < self.len());
 
         let mut cursor = match self.start.clone() {
             Some(x) => x,
             None => return,
         };
+
         for _ in 0..index {
-            cursor = match cursor.as_ref().borrow().next.clone() {
+            let cur_next = cursor.as_ref().borrow().next.clone();
+            cursor = match cur_next {
                 Some(x) => x,
                 None => return,
             };
         }
 
-        let cursor_old_next = cursor.as_ref().borrow().next.clone();
-        let new_node = Node {
+        let mut cursor_node = cursor.as_ref().borrow_mut();
+        let cursor_old_next = cursor_node.next.clone();
+        let new_node = Rc::new(RefCell::new(Node {
             key,
             item,
             next: cursor_old_next,
-        };
+        }));
+        cursor_node.next = Some(new_node);
     }
 
+    /// Get element with the specified key, or None if none was found.
     pub fn get(&self, key: K) -> Option<T> {
         let mut cursor = match self.start.clone() {
             Some(x) => x,
@@ -118,6 +153,7 @@ where
         }
     }
 
+    /// Get the length of the list. (requires iterating through the entire list)
     pub fn len(&self) -> usize {
         println!("Nodes in len: {:?}", self.start);
         let mut i: usize = 0;
